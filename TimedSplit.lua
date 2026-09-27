@@ -44,13 +44,13 @@ local function saveMetadata (photo)
     local isVirtualCopy = photo:getRawMetadata ("isVirtualCopy")
     if fileFormat == "VIDEO" or isVirtualCopy then return nil, nil end
     local function returnErr (err)
-        local msg = Util.logError ("Couldn't save metadata to file: %s\n%s",photo.path, err)
+        local msg = Logger:error ("Couldn't save metadata to file: %s\n%s",photo.path, err)
         return photo.path, msg
         end
         --[[ Sometimes photo:saveMetadata() fails with an obscure
         error, perhaps because of a race inside LR. Retrying 
         for up to 10 seconds seems to reduce the occurrences. ]]
-    local startTime = currentTime()
+    local startTime = LrDate.currentTime()
     for i = 1, math.huge do
         local success, err = LrTasks.pcall (photo.saveMetadata, photo)
         if success then
@@ -70,7 +70,7 @@ local function saveMetadata (photo)
          photo.path .. "_xmp"}
     local delay, waitTime, maxWaitTime = 0.01, 0, 5
     while true do
-        if currentTime () > startTime + maxWaitTime then 
+        if LrDate.currentTime () > startTime + maxWaitTime then 
             return returnErr ("Timed out")
             end
         for _, path in ipairs (paths) do 
@@ -121,7 +121,7 @@ LrTasks.startAsyncTask( function ()
 		local PartArray = {}
 		for i,PhotoIt in ipairs(currPhotos) do
 			-- It's omitted 'LrProgress:isCancelled()' check for speedup.
-			Logger:info('Scan photo : ' .. PhotoIt:getFormattedMetadata('fileName'))
+--			Logger:info('Scan photo : ' .. PhotoIt:getFormattedMetadata('fileName'))
 			local photoTime = PhotoIt:getRawMetadata('dateTime')
 			if (currentTime == 0) then
 				currentTime = photoTime
@@ -137,36 +137,38 @@ LrTasks.startAsyncTask( function ()
 			ProgressBar:setPortionComplete(i,countPhotos)
 		end -- end of for photos loop
 		table.insert(TargetArray, PartArray) -- Add the last group to TargetArray
+		Logger:info('Total groups to split : ' .. #TargetArray)
 		if (#TargetArray > 1) then
 			ProgressBar:setCaption(LOC '$$$/timedsplit/splitting=Splitting into ' .. #TargetArray .. ' folders.')
-			ProgressBar:setPortionComplete(1, #TargetArray)
 			local SourcePath = SourceFolder:getPath()
 			local ParentFolder = SourceFolder:getParent()
 			Logger:info('Source folder path : ' .. SourcePath)
-			-- Todo : check folder name is already exist. and seek next folder name.
 			for i = 2, #TargetArray do -- Target loops
 				local TargetFolderName = FolderName .. '.' .. i
-				local TargetFolderPath = ParentFolder:getPath() .. PATHDELM .. TargetFolderName
-				Logger:info('Create new folder : ' .. TargetFolderPath)
-				LrFileUtils.createDirectory(TargetFolderPath)
+				local TargetFolderPath = ParentFolder:getPath() .. TargetFolderName
+				Logger:info('Create destination folder : ' .. TargetFolderPath)
+				if (LrFileUtils.exists(TargetFolderPath) == false) then
+					LrFileUtils.createDirectory(TargetFolderPath)
+				end
+				Logger:info('index : '.. i .. ' count : ' .. #TargetArray[i])
 				for j,PhotoIt in ipairs(TargetArray[i]) do -- Photo loops
+					ProgressBar:setPortionComplete(j, #TargetArray[i])
 					local TargetPath = TargetFolderPath .. PATHDELM .. PhotoIt:getFormattedMetadata('fileName')
 					Logger:info('Photo to move : ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
-					CurrentCatalog:setSelectedPhotos(PhotoIt)
+					CurrentCatalog:setSelectedPhotos(PhotoIt, {})
 	--				LrSelection.removeFromCatalog(PhotoIt)
 	--				LrFileUtils.move(PhotoIt:getRawMetadata('path'), TargetPath)
 	--				CurrentCatalog:addPhoto(TargetFolderPath)
 				end
-				ProgressBar:setPortionComplete(i, #TargetArray)
 			end -- end of for Target loop
 		else
-			ProgressBar:done()
 			Logger:info('No need to split.')
 		end
  	end ,
 		-- a block called by write access can't get
 		{ timeout = TIMEOUT, asynchronous = true }
 	) -- end of withWriteAccessDo function()
+	ProgressBar:done()
 
 end ) -- end of startAsyncTask function()
 return
