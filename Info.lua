@@ -11,13 +11,13 @@ return {
 	LrToolkitIdentifier = 'cx.ath.remov-b4-flight.timedsplit',
 	LrPluginName = 'TimedSplit',
 	LrPluginInfoUrl='https://github.com/remov-b4-flight/TimedSplit.lrplugin',
-	LrLibraryMenuItems = { 
+	LrLibraryMenuItems = {
 		{title = 'Time-based Split',
 		file = 'TimedSplit.lua',},
 	},
 	LrPluginInfoProvider = 'PluginInfo.lua',
 	LrInitPlugin = 'PluginInit.lua',
 
-	VERSION = { major=0, minor=0, revision=0, build=1, },
+	VERSION = { major = 0, minor = 0, revision = 1, build = 2, },
 
 }

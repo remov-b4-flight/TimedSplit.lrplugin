@@ -1,6 +1,6 @@
 --[[-------------------------------------------------------
 @file	PluginInfo.lua
-@bried	Define plugin manager dialogs at TimedSplit.lrplugin
+@brief	Define plugin manager dialogs at TimedSplit.lrplugin
 @author	remov-b4-flight
 ---------------------------------------------------------]]
 local LrApplication = import 'LrApplication'
