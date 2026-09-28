@@ -28,19 +28,6 @@ else
 	PATHDELM = '/'
 end
 
---[[----------------------------------------------------------------------------
-public string path, string err
-saveMetadata (LrPhoto photo)
-Initiates a Metadata > Save Metadata To File for the photo and waits for up
-to 10 seconds for it complete.  Ignores videos and virtual copies.
-Returns in "path" the file to which the metadata was saved (a .xmp for
-raws, nil for videos and virtual copies, the photo file itself otherwise).
-If a photo can't be saved, returns an error message in "err".
-Starting in LR 15, photo:saveMetadata() can return before saving to disk.
-This might have occurred many years previously, not sure, but it didn't
-occur in LR 14.
-------------------------------------------------------------------------------]]
-
 if (#CurrentSelectionArray > 1) then
 	return
 end
@@ -59,7 +46,7 @@ local SourceFolder = currSelection
 -- Main part of this plugin.
 LrTasks.startAsyncTask( function ()
 	local FolderName = SourceFolder:getName()
-	local ProgressBar = LrProgress({title = LOC '$$$/timedsplit/scanning=Scanning Folder : ' .. FolderName})
+	local ProgressBar = LrProgress({title = LOC '$$$/timedsplit/splitting=Splitting Folder : ' .. FolderName})
 	local currPhotos = SourceFolder:getPhotos(false)
 
 	local countPhotos = #currPhotos
@@ -89,7 +76,7 @@ LrTasks.startAsyncTask( function ()
 		table.insert(TargetArray, PartArray) -- Add the last group to TargetArray
 		Logger:info('Total groups to split : ' .. #TargetArray)
 		if (#TargetArray > 1) then
-			ProgressBar:setCaption(LOC '$$$/timedsplit/splitting=Splitting into ' .. #TargetArray .. ' folders.')
+			ProgressBar:setCaption(LOC '$$$/timedsplit/splitting=Splitting into ' .. #TargetArray .. 'folders.')
 			local SourcePath = SourceFolder:getPath()
 			local ParentFolder = SourceFolder:getParent()
 			Logger:info('Source folder path : ' .. SourcePath)
@@ -102,6 +89,7 @@ LrTasks.startAsyncTask( function ()
 				end
 				Logger:info('index : '.. i .. ' count : ' .. #TargetArray[i])
 				for j,PhotoIt in ipairs(TargetArray[i]) do -- Photo loops
+					Logger:info('Iteration : ' .. j)
 					ProgressBar:setPortionComplete(j, #TargetArray[i])
 					local isVirtualCopy = PhotoIt:getRawMetadata ('isVirtualCopy')
 			    	local fileFormat = PhotoIt:getRawMetadata ('fileFormat')
@@ -114,18 +102,22 @@ LrTasks.startAsyncTask( function ()
 							local beforeAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
 							PhotoIt:saveMetadata()
 							for k = 1, 10 do
+								LrTasks.sleep(0.5)
 								local afterAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
 								if (beforeAttrib.fileModificationDate < afterAttrib.fileModificationDate) then
-									break
+									goto move
 								end
-								LrTasks.sleep(0.5)
 							end
+							Logger:file('Metadata saving timeout')
 						end
+::move::
+						Logger:info('Remove from catalog : ' .. PhotoIt:getFormattedMetadata('fileName'))
 						LrSelection.removeFromCatalog(PhotoIt)
 						Logger:info('Photo to move : ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
 						LrFileUtils.move(PhotoIt:getRawMetadata('path'), TargetPath)
 						Logger:info('Add to catalog : ' .. TargetPath)
 						CurrentCatalog:addPhoto(TargetPath)
+						Logger:info('Done')
 					end
 				end
 			end -- end of for Target loop

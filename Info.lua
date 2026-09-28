@@ -6,7 +6,7 @@
 
 return {
 
-	LrSdkVersion = 6.0,
+	LrSdkVersion = 14.3,
 
 	LrToolkitIdentifier = 'cx.ath.remov-b4-flight.timedsplit',
 	LrPluginName = 'TimedSplit',
@@ -18,6 +18,6 @@ return {
 	LrPluginInfoProvider = 'PluginInfo.lua',
 	LrInitPlugin = 'PluginInit.lua',
 
-	VERSION = { major = 0, minor = 0, revision = 2, build = 3, },
+	VERSION = { major = 0, minor = 0, revision = 3, build = 4, },
 
 }

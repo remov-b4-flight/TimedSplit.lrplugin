@@ -1,4 +1,3 @@
-"$$$/timedsplit/processing=フォルダ分割中 : "
-"$$$/timedsplit/scanning=フォルダスキャン中 : "
+"$$$/timedsplit/splitting=フォルダ分割中 : "
 "$$$/timedsplit/description=撮影時間の間隔が空いたらフォルダを分割します"
 "$$$/timedsplit/interval=分割する間隔"
