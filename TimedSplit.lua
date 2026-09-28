@@ -8,6 +8,7 @@ local LrApplication = import 'LrApplication'
 local LrTasks = import 'LrTasks'
 local LrProgress= import 'LrProgressScope'
 local LrFileUtils = import 'LrFileUtils'
+local LrSelection = import 'LrSelection'
 local prefs = import 'LrPrefs'.prefsForPlugin()
 local Info = require 'Info'
 
@@ -39,57 +40,6 @@ Starting in LR 15, photo:saveMetadata() can return before saving to disk.
 This might have occurred many years previously, not sure, but it didn't
 occur in LR 14.
 ------------------------------------------------------------------------------]]
-local function saveMetadata (photo)
-    local fileFormat = photo:getRawMetadata ("fileFormat")
-    local isVirtualCopy = photo:getRawMetadata ("isVirtualCopy")
-    if fileFormat == "VIDEO" or isVirtualCopy then return nil, nil end
-    local function returnErr (err)
-        local msg = Logger:error ("Couldn't save metadata to file: %s\n%s",photo.path, err)
-        return photo.path, msg
-        end
-        --[[ Sometimes photo:saveMetadata() fails with an obscure
-        error, perhaps because of a race inside LR. Retrying 
-        for up to 10 seconds seems to reduce the occurrences. ]]
-    local startTime = LrDate.currentTime()
-    for i = 1, math.huge do
-        local success, err = LrTasks.pcall (photo.saveMetadata, photo)
-        if success then
-            if i > 1 then
-                Debug.logn ("Util.saveMetadata:", i,
-                    "tries needed for successful save", photo.path)
-                end
-            break
-            end
-        if i >= 10 and not success then return returnErr (err) end
-        LrTasks.sleep (1)
-        end
-        --[[ Starting in LR 15, photo:saveMetadata () is asynchronous.
-        Wait until we observe the file's modification time changes. ]]
-    local paths = fileFormat ~= "RAW" and {photo.path} or 
-        {removeExtension (photo.path) .. ".xmp", 
-         photo.path .. "_xmp"}
-    local delay, waitTime, maxWaitTime = 0.01, 0, 5
-    while true do
-        if LrDate.currentTime () > startTime + maxWaitTime then 
-            return returnErr ("Timed out")
-            end
-        for _, path in ipairs (paths) do 
-            local modTime = fileAttributes (path).fileModificationDate or 0
-            if modTime >= startTime then 
-                if waitTime > 0 then
-                    Util.logError ("Util.saveMetadata wait: %g secs %s", 
-                        waitTime, path)
-                    end
-                return path, nil 
-                end
-            end
-        LrTasks.sleep (delay)
-        waitTime = waitTime + delay
-        delay = math.min (delay * 1.5, 0.2)
-        end
-    return path, nil
-end
-
 
 if (#CurrentSelectionArray > 1) then
 	return
@@ -153,12 +103,30 @@ LrTasks.startAsyncTask( function ()
 				Logger:info('index : '.. i .. ' count : ' .. #TargetArray[i])
 				for j,PhotoIt in ipairs(TargetArray[i]) do -- Photo loops
 					ProgressBar:setPortionComplete(j, #TargetArray[i])
-					local TargetPath = TargetFolderPath .. PATHDELM .. PhotoIt:getFormattedMetadata('fileName')
-					Logger:info('Photo to move : ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
-					CurrentCatalog:setSelectedPhotos(PhotoIt, {})
-	--				LrSelection.removeFromCatalog(PhotoIt)
-	--				LrFileUtils.move(PhotoIt:getRawMetadata('path'), TargetPath)
-	--				CurrentCatalog:addPhoto(TargetFolderPath)
+					local isVirtualCopy = PhotoIt:getRawMetadata ('isVirtualCopy')
+			    	local fileFormat = PhotoIt:getRawMetadata ('fileFormat')
+					if (isVirtualCopy == false ) then
+						local TargetPath = TargetFolderPath .. PATHDELM .. PhotoIt:getFormattedMetadata('fileName')
+						CurrentCatalog:setSelectedPhotos(PhotoIt, {})
+						--does not save metadata for video files
+						if (fileFormat == 'JPG') then
+							Logger:info('Metadata saving : ' .. PhotoIt:getFormattedMetadata('fileName') )
+							local beforeAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
+							PhotoIt:saveMetadata()
+							for k = 1, 10 do
+								local afterAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
+								if (beforeAttrib.fileModificationDate < afterAttrib.fileModificationDate) then
+									break
+								end
+								LrTasks.sleep(0.5)
+							end
+						end
+						LrSelection.removeFromCatalog(PhotoIt)
+						Logger:info('Photo to move : ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
+						LrFileUtils.move(PhotoIt:getRawMetadata('path'), TargetPath)
+						Logger:info('Add to catalog : ' .. TargetPath)
+						CurrentCatalog:addPhoto(TargetPath)
+					end
 				end
 			end -- end of for Target loop
 		else
