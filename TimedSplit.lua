@@ -100,7 +100,15 @@ LrTasks.startAsyncTask( function ()
 						if (fileFormat == 'JPG') then
 							Logger:info('Metadata saving : ' .. PhotoIt:getFormattedMetadata('fileName') )
 							local beforeAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
-							PhotoIt:saveMetadata()
+							for l = 0, 10 do
+								local status, err = LrTasks.pcall(PhotoIt.saveMetadata, PhotoIt)
+								if status then
+									break
+								else
+									Logger:info('Metadata saving error : ' .. err)
+									LrTasks.sleep(0.5)
+								end
+							end
 							for k = 1, 10 do
 								LrTasks.sleep(0.5)
 								local afterAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
