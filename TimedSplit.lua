@@ -50,21 +50,23 @@ LrTasks.startAsyncTask( function ()
 	local currPhotos = SourceFolder:getPhotos(false)
 
 	local countPhotos = #currPhotos
+	Logger:info('# of photos:' .. countPhotos)
 	local currentTime = 0
 	local TargetArray = {}
 	CurrentCatalog:withWriteAccessDo(Info.LrPluginName, function()
-		Logger:info('Scan files in folder : ' .. FolderName)
-		-- loops photos in collection
+		Logger:info('Scaning: ' .. FolderName)
+		-- loop photos and determine gaps in collection
 		local PartArray = {}
 		for i,PhotoIt in ipairs(currPhotos) do
-			-- It's omitted 'LrProgress:isCancelled()' check for speedup.
---			Logger:info('Scan photo : ' .. PhotoIt:getFormattedMetadata('fileName'))
 			local photoTime = PhotoIt:getRawMetadata('dateTime')
+			Logger:info(i ..':' .. PhotoIt:getFormattedMetadata('fileName'))
 			if (currentTime == 0) then
 				currentTime = photoTime
 			else
-				local diff = math.floor(photoTime - currentTime)
+				local diff = math.abs(math.floor(photoTime - currentTime))
+				Logger:info('diff: ' .. diff .. '(s)')
 				if (diff >= prefs.interval * SECPERMIN) then
+					Logger:info('Gap: ' .. i .. ' curr. size: ' .. #PartArray)
 					table.insert(TargetArray, PartArray)
 					PartArray = {} -- Reset the part array for the next group
 				end
@@ -72,40 +74,39 @@ LrTasks.startAsyncTask( function ()
 			end
 			table.insert(PartArray, PhotoIt)
 			ProgressBar:setPortionComplete(i,countPhotos)
-		end -- end of for photos loop
+		end -- end of for photo scan loop
 		table.insert(TargetArray, PartArray) -- Add the last group to TargetArray
-		Logger:info('Total groups to split : ' .. #TargetArray)
+		Logger:info('# to devide: ' .. #TargetArray)
+		-- If there are more than one group, proceed to split into folders
 		if (#TargetArray > 1) then
 			ProgressBar:setCaption(LOC '$$$/timedsplit/splitting=Splitting into ' .. #TargetArray .. 'folders.')
 			local SourcePath = SourceFolder:getPath()
 			local ParentFolder = SourceFolder:getParent()
-			Logger:info('Source folder path : ' .. SourcePath)
+			Logger:info('Source folder: ' .. SourcePath)
 			for i = 2, #TargetArray do -- Target loops
 				local TargetFolderName = FolderName .. '.' .. i
 				local TargetFolderPath = ParentFolder:getPath() .. TargetFolderName
-				Logger:info('Create destination folder : ' .. TargetFolderPath)
+				Logger:info(i .. ' Create dest. folder: ' .. TargetFolderPath .. ' count:' .. #TargetArray[i])
 				if (LrFileUtils.exists(TargetFolderPath) == false) then
 					LrFileUtils.createDirectory(TargetFolderPath)
 				end
-				Logger:info('index : '.. i .. ' count : ' .. #TargetArray[i])
 				for j,PhotoIt in ipairs(TargetArray[i]) do -- Photo loops
-					Logger:info('Iteration : ' .. j)
 					ProgressBar:setPortionComplete(j, #TargetArray[i])
 					local isVirtualCopy = PhotoIt:getRawMetadata ('isVirtualCopy')
 			    	local fileFormat = PhotoIt:getRawMetadata ('fileFormat')
 					if (isVirtualCopy == false ) then
 						local TargetPath = TargetFolderPath .. PATHDELM .. PhotoIt:getFormattedMetadata('fileName')
 						CurrentCatalog:setSelectedPhotos(PhotoIt, {})
-						--does not save metadata for video files
+						-- does not save metadata for RAW,VIDEO files
 						if (fileFormat == 'JPG') then
-							Logger:info('Metadata saving : ' .. PhotoIt:getFormattedMetadata('fileName') )
+							Logger:info('saveMetadata() :' .. PhotoIt:getFormattedMetadata('fileName') )
 							local beforeAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
 							for l = 0, 10 do
 								local status, err = LrTasks.pcall(PhotoIt.saveMetadata, PhotoIt)
 								if status then
 									break
 								else
-									Logger:info('Metadata saving error : ' .. err)
+									Logger:error('saveMetadata() error: ' .. err)
 									LrTasks.sleep(0.5)
 								end
 							end
@@ -113,24 +114,22 @@ LrTasks.startAsyncTask( function ()
 								LrTasks.sleep(0.5)
 								local afterAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
 								if (beforeAttrib.fileModificationDate < afterAttrib.fileModificationDate) then
-									goto move
+									break
 								end
 							end
-							Logger:file('Metadata saving timeout')
 						end
-::move::
-						Logger:info('Remove from catalog : ' .. PhotoIt:getFormattedMetadata('fileName'))
+						Logger:info(i .. ' Remove from catalog: ' .. PhotoIt:getFormattedMetadata('fileName'))
 						LrSelection.removeFromCatalog(PhotoIt)
-						Logger:info('Photo to move : ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
+						Logger:info('move: ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
 						LrFileUtils.move(PhotoIt:getRawMetadata('path'), TargetPath)
-						Logger:info('Add to catalog : ' .. TargetPath)
+						Logger:info('Add to catalog: ' .. TargetPath)
 						CurrentCatalog:addPhoto(TargetPath)
 						Logger:info('Done')
 					end
 				end
 			end -- end of for Target loop
 		else
-			Logger:info('No need to split.')
+			Logger:info('Not needed.')
 		end
  	end ,
 		-- a block called by write access can't get
