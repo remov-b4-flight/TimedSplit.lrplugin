@@ -99,7 +99,7 @@ LrTasks.startAsyncTask( function ()
 						CurrentCatalog:setSelectedPhotos(PhotoIt, {})
 						-- does not save metadata for RAW,VIDEO files
 						if (fileFormat == 'JPG') then
-							Logger:info('saveMetadata() :' .. PhotoIt:getFormattedMetadata('fileName') )
+							Logger:info('saveMetadata(): ' .. PhotoIt:getFormattedMetadata('fileName') )
 							local beforeAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
 							for l = 0, 10 do
 								local status, err = LrTasks.pcall(PhotoIt.saveMetadata, PhotoIt)
@@ -118,7 +118,7 @@ LrTasks.startAsyncTask( function ()
 								end
 							end
 						end
-						Logger:info(i .. ' Remove from catalog: ' .. PhotoIt:getFormattedMetadata('fileName'))
+						Logger:info(j .. ' Remove from catalog: ' .. PhotoIt:getFormattedMetadata('fileName'))
 						LrSelection.removeFromCatalog(PhotoIt)
 						Logger:info('move: ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
 						LrFileUtils.move(PhotoIt:getRawMetadata('path'), TargetPath)
