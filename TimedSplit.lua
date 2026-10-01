@@ -9,6 +9,7 @@ local LrTasks = import 'LrTasks'
 local LrProgress= import 'LrProgressScope'
 local LrFileUtils = import 'LrFileUtils'
 local LrSelection = import 'LrSelection'
+local LrDate = import 'LrDate'
 local prefs = import 'LrPrefs'.prefsForPlugin()
 local Info = require 'Info'
 
@@ -20,7 +21,7 @@ local CurrentCatalog = LrApplication:activeCatalog()
 local CurrentSelectionArray = CurrentCatalog:getActiveSources()
 local TIMEOUT = 0.25
 local SECPERMIN = 60
-local UI_WAIT = 0.33
+local UI_WAIT = 0.25
 local FILE_WAIT = 0.5
 -- Define path delimiter
 if WIN_ENV then
@@ -55,12 +56,12 @@ LrTasks.startAsyncTask( function ()
 	local currentTime = 0
 	local TargetArray = {}
 	CurrentCatalog:withWriteAccessDo(Info.LrPluginName, function()
-		Logger:info('Scaning: ' .. FolderName)
+		Logger:info('Scanning: ' .. FolderName)
 		-- loop photos and determine gaps in collection
 		local PartArray = {}
 		for i,PhotoIt in ipairs(currPhotos) do
 			local photoTime = PhotoIt:getRawMetadata('dateTime')
-			Logger:info(i ..':' .. PhotoIt:getFormattedMetadata('fileName'))
+--			Logger:info(i ..':' .. PhotoIt:getFormattedMetadata('fileName'))
 			if (currentTime == 0) then
 				currentTime = photoTime
 			else
@@ -104,6 +105,10 @@ LrTasks.startAsyncTask( function ()
 						if (fileFormat == 'JPG') then
 							Logger:info('saveMetadata(): ' .. SourceFileName)
 							local beforeAttrib = LrFileUtils.fileAttributes(SourcePath)
+							if (beforeAttrib == nil) then
+								beforeAttrib = {fileModificationDate = LrDate.currentTime()}
+								Logger:error('fileAttributes() error: ' .. SourcePath)
+							end
 							for l = 0, 10 do
 								local status, err = LrTasks.pcall(PhotoIt.saveMetadata, PhotoIt)
 								if status then
@@ -116,6 +121,9 @@ LrTasks.startAsyncTask( function ()
 							for k = 1, 10 do
 								LrTasks.sleep(FILE_WAIT)
 								local afterAttrib = LrFileUtils.fileAttributes(SourcePath)
+								if (afterAttrib == nil) then
+									afterAttrib = beforeAttrib;
+								end
 								if (beforeAttrib.fileModificationDate < afterAttrib.fileModificationDate) then
 									break
 								end
