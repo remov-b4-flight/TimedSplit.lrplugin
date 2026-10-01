@@ -20,7 +20,8 @@ local CurrentCatalog = LrApplication:activeCatalog()
 local CurrentSelectionArray = CurrentCatalog:getActiveSources()
 local TIMEOUT = 0.25
 local SECPERMIN = 60
-
+local UI_WAIT = 0.33
+local FILE_WAIT = 0.5
 -- Define path delimiter
 if WIN_ENV then
 	PATHDELM = '¥'
@@ -46,11 +47,11 @@ local SourceFolder = currSelection
 -- Main part of this plugin.
 LrTasks.startAsyncTask( function ()
 	local FolderName = SourceFolder:getName()
-	local ProgressBar = LrProgress({title = LOC '$$$/timedsplit/splitting=Splitting Folder : ' .. FolderName})
+	local ProgressBar = LrProgress({title = LOC '$$$/timedsplit/splitting=Splitting Folder: ' .. FolderName})
 	local currPhotos = SourceFolder:getPhotos(false)
 
 	local countPhotos = #currPhotos
-	Logger:info('# of photos:' .. countPhotos)
+	Logger:info('# of photos: ' .. countPhotos)
 	local currentTime = 0
 	local TargetArray = {}
 	CurrentCatalog:withWriteAccessDo(Info.LrPluginName, function()
@@ -64,10 +65,9 @@ LrTasks.startAsyncTask( function ()
 				currentTime = photoTime
 			else
 				local diff = math.abs(math.floor(photoTime - currentTime))
-				Logger:info('diff: ' .. diff .. '(s)')
 				if (diff >= prefs.interval * SECPERMIN) then
-					Logger:info('Gap: ' .. i .. ' curr. size: ' .. #PartArray)
 					table.insert(TargetArray, PartArray)
+					Logger:info('Diff: ' .. diff .. '(s) Gap: ' .. #TargetArray .. ' curr. size: ' .. #PartArray)
 					PartArray = {} -- Reset the part array for the next group
 				end
 				currentTime = photoTime
@@ -76,7 +76,7 @@ LrTasks.startAsyncTask( function ()
 			ProgressBar:setPortionComplete(i,countPhotos)
 		end -- end of for photo scan loop
 		table.insert(TargetArray, PartArray) -- Add the last group to TargetArray
-		Logger:info('# to devide: ' .. #TargetArray)
+		Logger:info('Gap: ' .. #TargetArray .. ' curr. size: ' .. #PartArray)
 		-- If there are more than one group, proceed to split into folders
 		if (#TargetArray > 1) then
 			ProgressBar:setCaption(LOC '$$$/timedsplit/splitting=Splitting into ' .. #TargetArray .. 'folders.')
@@ -96,33 +96,37 @@ LrTasks.startAsyncTask( function ()
 			    	local fileFormat = PhotoIt:getRawMetadata ('fileFormat')
 					if (isVirtualCopy == false ) then
 						local TargetPath = TargetFolderPath .. PATHDELM .. PhotoIt:getFormattedMetadata('fileName')
+						local SourcePath = PhotoIt:getRawMetadata('path')
+						local SourceFileName = PhotoIt:getFormattedMetadata('fileName')
 						CurrentCatalog:setSelectedPhotos(PhotoIt, {})
+						LrTasks.sleep(UI_WAIT) -- just workaround
 						-- does not save metadata for RAW,VIDEO files
 						if (fileFormat == 'JPG') then
-							Logger:info('saveMetadata(): ' .. PhotoIt:getFormattedMetadata('fileName') )
-							local beforeAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
+							Logger:info('saveMetadata(): ' .. SourceFileName)
+							local beforeAttrib = LrFileUtils.fileAttributes(SourcePath)
 							for l = 0, 10 do
 								local status, err = LrTasks.pcall(PhotoIt.saveMetadata, PhotoIt)
 								if status then
 									break
 								else
 									Logger:error('saveMetadata() error: ' .. err)
-									LrTasks.sleep(0.5)
+									LrTasks.sleep(FILE_WAIT)
 								end
 							end
 							for k = 1, 10 do
-								LrTasks.sleep(0.5)
-								local afterAttrib = LrFileUtils.fileAttributes(PhotoIt:getRawMetadata('path'))
+								LrTasks.sleep(FILE_WAIT)
+								local afterAttrib = LrFileUtils.fileAttributes(SourcePath)
 								if (beforeAttrib.fileModificationDate < afterAttrib.fileModificationDate) then
 									break
 								end
 							end
 						end
-						Logger:info(j .. ' Remove from catalog: ' .. PhotoIt:getFormattedMetadata('fileName'))
+						Logger:info(j .. ' Remove from catalog: ' .. SourceFileName)
 						LrSelection.removeFromCatalog(PhotoIt)
-						Logger:info('move: ' .. PhotoIt:getRawMetadata('path') .. ' -> ' .. TargetPath)
-						LrFileUtils.move(PhotoIt:getRawMetadata('path'), TargetPath)
-						Logger:info('Add to catalog: ' .. TargetPath)
+						LrTasks.sleep(UI_WAIT) -- just workaround
+						Logger:info('Move: ' .. SourceFileName .. ' => ' .. TargetPath)
+						LrFileUtils.move(SourcePath, TargetPath)
+						Logger:info('Add to catalog: ' .. SourceFileName)
 						CurrentCatalog:addPhoto(TargetPath)
 						Logger:info('Done')
 					end
