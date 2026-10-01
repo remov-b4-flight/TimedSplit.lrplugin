@@ -21,7 +21,7 @@ local CurrentCatalog = LrApplication:activeCatalog()
 local CurrentSelectionArray = CurrentCatalog:getActiveSources()
 local TIMEOUT = 0.25
 local SECPERMIN = 60
-local UI_WAIT = 0.25
+local UI_WAIT = 0.33
 local FILE_WAIT = 0.5
 -- Define path delimiter
 if WIN_ENV then
@@ -77,7 +77,7 @@ LrTasks.startAsyncTask( function ()
 			ProgressBar:setPortionComplete(i,countPhotos)
 		end -- end of for photo scan loop
 		table.insert(TargetArray, PartArray) -- Add the last group to TargetArray
-		Logger:info('Gap: ' .. #TargetArray .. ' curr. size: ' .. #PartArray)
+		Logger:info('Last Gap: ' .. #TargetArray .. ' curr. size: ' .. #PartArray)
 		-- If there are more than one group, proceed to split into folders
 		if (#TargetArray > 1) then
 			ProgressBar:setCaption(LOC '$$$/timedsplit/splitting=Splitting into ' .. #TargetArray .. 'folders.')
