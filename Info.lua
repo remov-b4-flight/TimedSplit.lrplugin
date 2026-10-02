@@ -5,19 +5,19 @@
 ---------------------------------------------------------]]
 
 return {
-
-	LrSdkVersion = 14.3,
+	LrSdkVersion = 15.0,
+	LrSdkMinVersion = 14.3,
 
 	LrToolkitIdentifier = 'cx.ath.remov-b4-flight.timedsplit',
 	LrPluginName = 'TimedSplit',
 	LrPluginInfoUrl='https://github.com/remov-b4-flight/TimedSplit.lrplugin',
-	LrLibraryMenuItems = {
+	LrExportMenuItems = {
 		{title = 'Time-based Split',
 		file = 'TimedSplit.lua',},
 	},
 	LrPluginInfoProvider = 'PluginInfo.lua',
 	LrInitPlugin = 'PluginInit.lua',
 
-	VERSION = { major = 0, minor = 1, revision = 2, build = 8, },
+	VERSION = { major = 0, minor = 2, revision = 0, build = 9, },
 
 }
