@@ -9,7 +9,7 @@ Adobe Lightroom plugin to Split folders when capture time gap.
 
 # 3. Use.  
 Selecting a folder and Launch 'Timed base Split' from Lightroom menu.  
-**CAUTION**
+**CAUTION**  
 After splitting, the information regarding which collection each photo belonged to is lost.
 # 4. Setting. 
 
