@@ -21,8 +21,9 @@ local CurrentCatalog = LrApplication:activeCatalog()
 local CurrentSelectionArray = CurrentCatalog:getActiveSources()
 local TIMEOUT = 0.25
 local SECPERMIN = 60
-local UI_WAIT = 0.33
+local UI_WAIT = 0.33 -- Reducing will cause issue with saveMetadata() and removeFromCatalog()
 local FILE_WAIT = 0.5
+local RETRYLIMIT = 10
 -- Define path delimiter
 if WIN_ENV then
 	PATHDELM = '¥'
@@ -60,7 +61,6 @@ LrTasks.startAsyncTask( function ()
 		local PartArray = {}
 		for i,PhotoIt in ipairs(currPhotos) do
 			local photoTime = PhotoIt:getRawMetadata('dateTime')
---			Logger:info(i ..':' .. PhotoIt:getFormattedMetadata('fileName'))
 			if (currentTime == 0) then
 				currentTime = photoTime
 			else
@@ -73,24 +73,23 @@ LrTasks.startAsyncTask( function ()
 				currentTime = photoTime
 			end
 			table.insert(PartArray, PhotoIt)
-			ProgressBar:setPortionComplete(i,countPhotos)
 		end -- end of for photo scan loop
 		table.insert(TargetArray, PartArray) -- Add the last gap to TargetArray
 		Logger:info('Gap: ' .. #TargetArray .. ' "LAST" size: ' .. #PartArray)
 		-- If there are more than one gap, proceed to split into folders
 		if (#TargetArray > 1) then
 			ProgressBar:setCaption(LOC '$$$/timedsplit/splitting=Splitting into ' .. #TargetArray .. 'folders.')
-			local SourcePath = SourceFolder:getPath()
 			local ParentFolder = SourceFolder:getParent()
-			for i = 2, #TargetArray do -- Target loops
+			local cnt = #TargetArray[1] -- 1st gap does not need to be moved, so start from the 2nd gap
+			for i = 2, #TargetArray do -- Target loops start from 2nd gap
 				local TargetFolderName = FolderName .. '.' .. i
 				local TargetFolderPath = ParentFolder:getPath() .. TargetFolderName
-				Logger:info(i .. ' Create dest. folder: ' .. TargetFolderPath .. ' count:' .. #TargetArray[i])
+				Logger:info('Gap: '.. i .. ' Create dest. folder: ' .. TargetFolderPath .. ' count:' .. #TargetArray[i])
 				if (LrFileUtils.exists(TargetFolderPath) == false) then
 					LrFileUtils.createDirectory(TargetFolderPath)
 				end
 				for j, PhotoIt in ipairs(TargetArray[i]) do -- Photo loops
-					ProgressBar:setPortionComplete(j, #TargetArray[i])
+					ProgressBar:setPortionComplete(cnt, countPhotos)
 					local isVirtualCopy = PhotoIt:getRawMetadata ('isVirtualCopy')
 			    	local fileFormat = PhotoIt:getRawMetadata ('fileFormat')
 					if (isVirtualCopy == false ) then
@@ -102,20 +101,20 @@ LrTasks.startAsyncTask( function ()
 						-- save Metadata for JPEG, not for RAW,VIDEO files
 						if (fileFormat == 'JPG') then
 							local beforeAttrib = LrFileUtils.fileAttributes(SourcePath) or {fileModificationDate = LrDate.currentTime()}
-							for l = 0, 10 do
+							for l = 1, RETRYLIMIT do
 								local status, err = LrTasks.pcall(PhotoIt.saveMetadata, PhotoIt)
-								if (status == true) then
+								if status then
 									break
 								else
 									Logger:error('saveMetadata() error: ' .. err)
 									LrTasks.sleep(FILE_WAIT)
 								end
 							end
-							for k = 0, 10 do
+							for k = 1, RETRYLIMIT do
 								LrTasks.sleep(FILE_WAIT)
 								local afterAttrib = LrFileUtils.fileAttributes(SourcePath) or beforeAttrib
 								if (beforeAttrib.fileModificationDate < afterAttrib.fileModificationDate) then
-									Logger:info('saveMetadata() confirmed')
+									Logger:info('saveMetadata() confirmed: ' .. k)
 									break
 								end
 							end
@@ -128,6 +127,7 @@ LrTasks.startAsyncTask( function ()
 						Logger:info('Add to cat.: ' .. SourceFileName)
 						CurrentCatalog:addPhoto(TargetPath)
 						Logger:info('Done')
+						cnt = cnt + 1
 					end -- vitual copy
 				end -- photos in gap loop
 			end -- end of for Target loop
