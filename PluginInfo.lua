@@ -12,14 +12,18 @@ local Info = require 'Info'
 
 local PluginInfo = {}
 local CurrentCatalog = LrApplication.activeCatalog()
+local INTVALMIN = 20
+local INTVALMAX = 120
 
 function PluginInfo.startDialog( propertyTable )
 	propertyTable.interval = prefs.interval
+	propertyTable.savemetadata = prefs.savemetadata
 end
 
 function PluginInfo.endDialog( propertyTable )
 	LrTasks.startAsyncTask( function ()
 		prefs.interval = propertyTable.interval
+		prefs.savemetadata = propertyTable.savemetadata
 	end)
 end
 
@@ -31,8 +35,9 @@ function PluginInfo.sectionsForTopOfDialog( viewFactory, propertyTable )
 			bind_to_object = propertyTable,
 			viewFactory:row {
 				viewFactory:static_text {title = LOC '$$$/timedsplit/interval=Interval (minutes)'},
-				viewFactory:slider {value = bind 'interval', min = 20, max = 120, integral = true},
-				viewFactory:edit_field {value = bind 'interval', width_in_digits = 3, min = 20, max = 120, integral = true},
+				viewFactory:slider {value = bind 'interval', min = INTVALMIN, max = INTVALMAX, integral = true},
+				viewFactory:edit_field {value = bind 'interval', width_in_digits = 3, min = INTVALMIN, max = INTVALMAX, integral = true},
+				viewFactory:checkbox {value = bind 'savemetadata', title = LOC '$$$/timedsplit/savemetadata=Save metadata' },
 			},
 		},
 	}

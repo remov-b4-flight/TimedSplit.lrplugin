@@ -99,7 +99,7 @@ LrTasks.startAsyncTask( function ()
 						CurrentCatalog:setSelectedPhotos(PhotoIt, {})
 						LrTasks.sleep(UI_WAIT) -- just workaround
 						-- save Metadata for JPEG, not for RAW,VIDEO files
-						if (fileFormat == 'JPG') then
+						if (fileFormat == 'JPG' and prefs.savemetadata == true) then
 							local beforeAttrib = LrFileUtils.fileAttributes(SourcePath) or {fileModificationDate = LrDate.currentTime()}
 							for l = 1, RETRYLIMIT do
 								local status, err = LrTasks.pcall(PhotoIt.saveMetadata, PhotoIt)
