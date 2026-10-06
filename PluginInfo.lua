@@ -12,8 +12,8 @@ local Info = require 'Info'
 
 local PluginInfo = {}
 local CurrentCatalog = LrApplication.activeCatalog()
-local INTVALMIN = 20
-local INTVALMAX = 120
+local TMIN = 20
+local TMAX = 120
 
 function PluginInfo.startDialog( propertyTable )
 	propertyTable.interval = prefs.interval
@@ -34,10 +34,12 @@ function PluginInfo.sectionsForTopOfDialog( viewFactory, propertyTable )
 			synopsis = LOC '$$$/timedsplit/description=If thare is gap between shoot, split into folders.',
 			bind_to_object = propertyTable,
 			viewFactory:row {
-				viewFactory:static_text {title = LOC '$$$/timedsplit/interval=Interval (minutes)'},
-				viewFactory:slider {value = bind 'interval', min = INTVALMIN, max = INTVALMAX, integral = true},
-				viewFactory:edit_field {value = bind 'interval', width_in_digits = 3, min = INTVALMIN, max = INTVALMAX, integral = true},
-				viewFactory:checkbox {value = bind 'savemetadata', title = LOC '$$$/timedsplit/savemetadata=Save metadata' },
+				viewFactory:static_text {title = LOC '$$$/timedsplit/interval=Interval (min.)'},
+--				viewFactory:slider {value = bind 'interval', min = TMIN, max = TMAX, integral = true},
+				viewFactory:edit_field {value = bind 'interval', width_in_digits = 3,
+				min = TMIN, max = TMAX, integral = true},
+				viewFactory:checkbox {title = LOC '$$$/timedsplit/savemetadata=Save metadata',
+				value = bind 'savemetadata',  },
 			},
 		},
 	}

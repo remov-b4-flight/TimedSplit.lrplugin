@@ -54,6 +54,9 @@ LrTasks.startAsyncTask( function ()
 
 	local countPhotos = #currPhotos
 	Logger:info('*** Plugin started scanning: "' .. FolderName .. '" # of Photos: ' .. countPhotos .. ' ***')
+	if (prefs.savemetadata == false) then
+		Logger:info('savemMetadata() is off.')
+	end
 	local currentTime = 0
 	local TargetArray = {}
 	CurrentCatalog:withWriteAccessDo(Info.LrPluginName, function()
