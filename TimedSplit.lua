@@ -48,12 +48,12 @@ end
 local SourceFolder = currSelection
 -- Main part of this plugin.
 LrTasks.startAsyncTask( function ()
-	local FolderName = SourceFolder:getName()
-	local ProgressBar = LrProgress({title = LOC '$$$/timedsplit/splitting=Splitting Folder: ' .. FolderName})
+	local SourceFolderName = SourceFolder:getName()
+	local ProgressBar = LrProgress({title = LOC '$$$/timedsplit/splitting=Splitting Folder: ' .. SourceFolderName})
 	local currPhotos = SourceFolder:getPhotos(false)
 
 	local countPhotos = #currPhotos
-	Logger:info('*** Plugin started scanning: "' .. FolderName .. '" # of Photos: ' .. countPhotos .. ' ***')
+	Logger:info('*** Plugin started scanning: "' .. SourceFolderName .. '" # of Photos: ' .. countPhotos .. ' ***')
 	if (prefs.savemetadata == false) then
 		Logger:info('savemMetadata() is off.')
 	end
@@ -85,7 +85,7 @@ LrTasks.startAsyncTask( function ()
 			local ParentFolder = SourceFolder:getParent()
 			local cnt = #TargetArray[1] -- 1st gap does not need to be moved, so start from the 2nd gap
 			for i = 2, #TargetArray do -- Target loops start from 2nd gap
-				local TargetFolderName = FolderName .. '.' .. i
+				local TargetFolderName = SourceFolderName .. '.' .. i
 				local TargetFolderPath = ParentFolder:getPath() .. TargetFolderName
 				Logger:info('Gap: '.. i .. ' Create dest. folder: ' .. TargetFolderPath .. ' count:' .. #TargetArray[i])
 				if (LrFileUtils.exists(TargetFolderPath) == false) then
